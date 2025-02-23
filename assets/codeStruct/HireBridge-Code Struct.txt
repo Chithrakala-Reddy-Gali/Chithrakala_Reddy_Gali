@@ -1,0 +1,319 @@
+Here is the basic code structure for the HireBridge - Job Portal application using Java and Spring Boot.
+This is not an entire project, only providing the core components to get an idea to start with:
+
+1. Project Structure
+/src
+  /main
+    /java
+      /com
+        /hirebridge
+          /config
+          /controller
+          /model
+          /repository
+          /service
+          /security
+    /resources
+      /templates
+      /static
+      /application.properties
+--------------------------------------------------------------------------------------------------
+2. Backend (Java with Spring Boot)
+
+Application Properties (application.properties):
+
+# H2 Database Configuration
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=password
+spring.jpa.hibernate.ddl-auto=update
+spring.h2.console.enabled=true
+
+# Spring Security Configuration
+spring.security.user.name=admin
+spring.security.user.password=admin
+spring.security.user.roles=ADMIN
+
+-------------------------------------------------------------------------------------------------------------------------
+3.User Model (User.java):
+
+package com.hirebridge.model;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+
+@Entity
+public class User {
+
+    @Id
+    @GeneratedValue
+    private Long id;
+    private String username;
+    private String password;
+    private String role;
+
+    // Getters and Setters
+}
+-------------------------------------------------------------------------------------------------------------------------
+4.Job Model (Job.java):
+
+package com.hirebridge.model;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+
+@Entity
+public class Job {
+
+    @Id
+    @GeneratedValue
+    private Long id;
+    private String title;
+    private String description;
+    private String company;
+    private String location;
+
+    // Getters and Setters
+}
+-------------------------------------------------------------------------------------------------------------------------
+6.Job Application Model (JobApplication.java):
+
+package com.hirebridge.model;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+
+@Entity
+public class JobApplication {
+
+    @Id
+    @GeneratedValue
+    private Long id;
+    private Long userId;
+    private Long jobId;
+    private String resume;
+
+    // Getters and Setters
+}
+-------------------------------------------------------------------------------------------------------------------------
+7.UserRepository.java:
+
+package com.hirebridge.repository;
+
+import com.hirebridge.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface UserRepository extends JpaRepository<User, Long> {
+    User findByUsername(String username);
+}
+-------------------------------------------------------------------------------------------------------------------------
+8.JobRepository.java:
+
+package com.hirebridge.repository;
+
+import com.hirebridge.model.Job;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface JobRepository extends JpaRepository<Job, Long> {
+    List<Job> findAllByLocation(String location);
+}
+-------------------------------------------------------------------------------------------------------------------------
+9.JobApplicationRepository.java:
+
+package com.hirebridge.repository;
+
+import com.hirebridge.model.JobApplication;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface JobApplicationRepository extends JpaRepository<JobApplication, Long> {
+}
+-------------------------------------------------------------------------------------------------------------------------
+10. Service Layer:
+JobService.java:
+
+package com.hirebridge.service;
+
+import com.hirebridge.model.Job;
+import com.hirebridge.repository.JobRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class JobService {
+
+    @Autowired
+    private JobRepository jobRepository;
+
+    public List<Job> getAllJobs() {
+        return jobRepository.findAll();
+    }
+
+    public Job getJobById(Long id) {
+        return jobRepository.findById(id).orElse(null);
+    }
+
+    public void createJob(Job job) {
+        jobRepository.save(job);
+    }
+}
+-------------------------------------------------------------------------------------------------------------------------
+11.JobApplicationService.java:
+
+package com.hirebridge.service;
+
+import com.hirebridge.model.JobApplication;
+import com.hirebridge.repository.JobApplicationRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class JobApplicationService {
+
+    @Autowired
+    private JobApplicationRepository jobApplicationRepository;
+
+    public void applyForJob(JobApplication jobApplication) {
+        jobApplicationRepository.save(jobApplication);
+    }
+}
+-------------------------------------------------------------------------------------------------------------------------
+12. Controller Layer (Web Layer):
+JobController.java:
+
+package com.hirebridge.controller;
+
+import com.hirebridge.model.Job;
+import com.hirebridge.model.JobApplication;
+import com.hirebridge.service.JobService;
+import com.hirebridge.service.JobApplicationService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+
+@Controller
+public class JobController {
+
+    @Autowired
+    private JobService jobService;
+
+    @Autowired
+    private JobApplicationService jobApplicationService;
+
+    // View all jobs
+    @GetMapping("/jobs")
+    public String getAllJobs(Model model) {
+        model.addAttribute("jobs", jobService.getAllJobs());
+        return "jobs";
+    }
+
+    // View job details
+    @GetMapping("/jobs/{id}")
+    public String viewJobDetails(@PathVariable Long id, Model model) {
+        model.addAttribute("job", jobService.getJobById(id));
+        return "job-detail";
+    }
+
+    // Apply for a job
+    @PostMapping("/jobs/{id}/apply")
+    public String applyForJob(@PathVariable Long id, @RequestParam String resume, Model model) {
+        JobApplication jobApplication = new JobApplication();
+        jobApplication.setJobId(id);
+        jobApplication.setResume(resume);
+        jobApplicationService.applyForJob(jobApplication);
+
+        model.addAttribute("message", "Application submitted successfully");
+        return "application-success";
+    }
+}
+-------------------------------------------------------------------------------------------------------------------------
+13. Frontend (Thymeleaf )
+jobs.html (List of Jobs):
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Job Listings</title>
+</head>
+<body>
+    <h1>Job Listings</h1>
+    <div>
+        <ul>
+            <li th:each="job : ${jobs}">
+                <a th:href="@{/jobs/{id}(id=${job.id})}" th:text="${job.title}"></a>
+                <p th:text="${job.description}"></p>
+            </li>
+        </ul>
+    </div>
+</body>
+</html>
+job-detail.html (Job Details and Application):
+html
+Copy
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Job Details</title>
+</head>
+<body>
+    <h1 th:text="${job.title}"></h1>
+    <p th:text="${job.description}"></p>
+    <form th:action="@{/jobs/{id}/apply(id=${job.id})}" method="post">
+        <label for="resume">Resume:</label>
+        <textarea id="resume" name="resume"></textarea>
+        <button type="submit">Apply</button>
+    </form>
+</body>
+</html>
+application-success.html (Application Success Message):
+html
+Copy
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Application Successful</title>
+</head>
+<body>
+    <h1 th:text="${message}"></h1>
+    <a href="/jobs">Back to job listings</a>
+</body>
+</html>
+-------------------------------------------------------------------------------------------------------------------------
+14. Security Configuration (Spring Security)
+SecurityConfig.java:
+java
+Copy
+package com.hirebridge.security;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+            .authorizeRequests()
+                .antMatchers("/jobs").permitAll()
+                .antMatchers("/jobs/**").authenticated()
+                .and()
+            .formLogin().permitAll()
+                .and()
+            .logout().permitAll();
+    }
+}
+----------------------------------------------------------------------------------------------------
+This is a basic implementation to help you get started. 
+You can add additional features based on your requirements.

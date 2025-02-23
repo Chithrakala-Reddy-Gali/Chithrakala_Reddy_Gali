@@ -1,0 +1,235 @@
+Here is the basic code structure for the ShopMate eCommerce application using Java and Spring Boot.
+This is not an entire project, only providing the core components to get an idea to start with:
+
+1. Project Structure
+
+ShopMate
+├── src
+│   ├── main
+│   │   ├── java
+│   │   │   └── com
+│   │   │       └── shopmate
+│   │   │           ├── controller
+│   │   │           ├── model
+│   │   │           ├── repository
+│   │   │           ├── service
+│   │   │           ├── ShopMateApplication.java
+│   │   └── resources
+│   │       ├── application.properties
+│   │       └── templates
+│   │           ├── index.html
+│   │           ├── product-list.html
+│   │           ├── product-detail.html
+│   │           └── cart.html
+├── pom.xml
+└── README.md
+--------------------------------------------------------------------------------------------------------------
+
+2. Dependencies (pom.xml)
+
+
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-thymeleaf</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.h2database</groupId>
+        <artifactId>h2</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-mail</artifactId>
+    </dependency>
+</dependencies>
+
+-----------------------------------------------------------------------------------------------------------
+
+3. Main Application (ShopMateApplication.java)
+
+package com.shopmate;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class ShopMateApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(ShopMateApplication.class, args);
+    }
+}
+----------------------------------------------------------------------------------------------------
+
+4. Model (Product.java)
+
+package com.shopmate.model;
+
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+
+@Entity
+public class Product {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String name;
+    private String description;
+    private Double price;
+    private String imageUrl;
+
+    // Getters and setters 
+}
+-----------------------------------------------------------------------------------------
+5. Repository (ProductRepository.java)
+
+package com.shopmate.repository;
+
+import com.shopmate.model.Product;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface ProductRepository extends JpaRepository<Product, Long> {
+    // Custom query methods as needed
+}
+
+-----------------------------------------------------------------------------------------------
+
+6. Service (ProductService.java)
+
+package com.shopmate.service;
+
+import com.shopmate.model.Product;
+import com.shopmate.repository.ProductRepository;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class ProductService {
+    
+    private final ProductRepository productRepository;
+
+    public ProductService(ProductRepository productRepository) {
+        this.productRepository = productRepository;
+    }
+
+    public List<Product> getAllProducts() {
+        return productRepository.findAll();
+    }
+
+    public Product getProductById(Long id) {
+        return productRepository.findById(id).orElse(null);
+    }
+}
+
+--------------------------------------------------------------------------------------------
+7. Controller (ProductController.java)
+
+package com.shopmate.controller;
+
+import com.shopmate.model.Product;
+import com.shopmate.service.ProductService;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+@Controller
+public class ProductController {
+    
+    private final ProductService productService;
+
+    public ProductController(ProductService productService) {
+        this.productService = productService;
+    }
+
+    @GetMapping("/")
+    public String showProductList(Model model) {
+        model.addAttribute("products", productService.getAllProducts());
+        return "product-list";
+    }
+
+    @GetMapping("/product/{id}")
+    public String showProductDetails(@PathVariable Long id, Model model) {
+        Product product = productService.getProductById(id);
+        model.addAttribute("product", product);
+        return "product-detail";
+    }
+}
+------------------------------------------------------------------------------------
+8. HTML Templates (Thymeleaf)
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopMate - Product List</title>
+</head>
+<body>
+    <h1>Welcome to ShopMate</h1>
+    <div class="products">
+        <div th:each="product : ${products}">
+            <div>
+                <h3 th:text="${product.name}"></h3>
+                <p th:text="${product.description}"></p>
+                <p th:text="'$' + ${product.price}"></p>
+                <a th:href="@{/product/{id}(id=${product.id})}">View Details</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+product-detail.html
+html
+Copy
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopMate - Product Detail</title>
+</head>
+<body>
+    <h1 th:text="${product.name}"></h1>
+    <img th:src="${product.imageUrl}" alt="Product Image"/>
+    <p th:text="${product.description}"></p>
+    <p th:text="'$' + ${product.price}"></p>
+    <button>Add to Cart</button>
+    <a href="/">Back to Product List</a>
+</body>
+</html>
+
+------------------------------------------------------------------------------------------------------
+
+9. application.properties
+
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=password
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+
+# H2 Console configuration (optional)
+spring.h2.console.enabled=true
+spring.h2.console.path=/h2-console
+
+----------------------------------------------------------------------------------------------------
+This is a basic implementation to help you get started. 
+You can add additional features like user authentication,
+shopping cart management, and order processing based on your requirements.
